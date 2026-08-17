@@ -1,0 +1,141 @@
+{
+  "indexes": [
+    { "collectionGroup": "ativos", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "unidade_id", "order": "ASCENDING" },
+      { "fieldPath": "setor_id", "order": "ASCENDING" },
+      { "fieldPath": "local_id", "order": "ASCENDING" } ] },
+
+    { "collectionGroup": "ativos", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "cliente_id", "order": "ASCENDING" },
+      { "fieldPath": "status", "order": "ASCENDING" } ] },
+
+    { "collectionGroup": "ativos", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "contrato_fornecedor_id", "order": "ASCENDING" },
+      { "fieldPath": "status", "order": "ASCENDING" } ] },
+
+    { "collectionGroup": "ativos", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "fornecedor_id", "order": "ASCENDING" },
+      { "fieldPath": "status", "order": "ASCENDING" } ] },
+
+    { "collectionGroup": "ativos", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "origem_ativo", "order": "ASCENDING" },
+      { "fieldPath": "status", "order": "ASCENDING" } ] },
+
+    { "collectionGroup": "ativos", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "municipio_id", "order": "ASCENDING" },
+      { "fieldPath": "status", "order": "ASCENDING" } ] },
+
+    { "collectionGroup": "ativos", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "status", "order": "ASCENDING" },
+      { "fieldPath": "patrimonio_newpc", "order": "ASCENDING" } ] },
+
+    { "collectionGroup": "ativos", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "cliente_id", "order": "ASCENDING" },
+      { "fieldPath": "ultimo_inventario", "order": "ASCENDING" } ] },
+
+    { "collectionGroup": "ativos", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "municipio_id", "order": "ASCENDING" },
+      { "fieldPath": "ultimo_inventario", "order": "ASCENDING" } ] },
+
+    { "collectionGroup": "inventarios", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "status", "order": "ASCENDING" },
+      { "fieldPath": "iniciado_em", "order": "DESCENDING" } ] },
+
+    { "collectionGroup": "inventarios", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "responsavel_id", "order": "ASCENDING" },
+      { "fieldPath": "status", "order": "ASCENDING" },
+      { "fieldPath": "iniciado_em", "order": "DESCENDING" } ] },
+
+    { "collectionGroup": "inventario_itens", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "ativo_id", "order": "ASCENDING" },
+      { "fieldPath": "data_hora", "order": "DESCENDING" } ] },
+
+    { "collectionGroup": "inventario_itens", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "inventario_id", "order": "ASCENDING" },
+      { "fieldPath": "resultado", "order": "ASCENDING" } ] },
+
+    { "collectionGroup": "inventario_itens", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "tecnico_id", "order": "ASCENDING" },
+      { "fieldPath": "data_hora", "order": "DESCENDING" } ] },
+
+    { "collectionGroup": "pendencias", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "status", "order": "ASCENDING" },
+      { "fieldPath": "criado_em", "order": "DESCENDING" } ] },
+
+    { "collectionGroup": "pendencias", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "tipo", "order": "ASCENDING" },
+      { "fieldPath": "status", "order": "ASCENDING" },
+      { "fieldPath": "criado_em", "order": "DESCENDING" } ] },
+
+    { "collectionGroup": "pendencias", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "criado_por", "order": "ASCENDING" },
+      { "fieldPath": "status", "order": "ASCENDING" } ] },
+
+    { "collectionGroup": "pendencias", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "cliente_id", "order": "ASCENDING" },
+      { "fieldPath": "status", "order": "ASCENDING" },
+      { "fieldPath": "criado_em", "order": "DESCENDING" } ] },
+
+    { "collectionGroup": "pendencias", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "cliente_id", "order": "ASCENDING" },
+      { "fieldPath": "tipo", "order": "ASCENDING" },
+      { "fieldPath": "status", "order": "ASCENDING" },
+      { "fieldPath": "criado_em", "order": "DESCENDING" } ] },
+
+    { "collectionGroup": "movimentacoes", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "ativo_id", "order": "ASCENDING" },
+      { "fieldPath": "data", "order": "DESCENDING" } ] },
+
+    { "collectionGroup": "movimentacoes", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "status", "order": "ASCENDING" },
+      { "fieldPath": "data", "order": "DESCENDING" } ] },
+
+    { "collectionGroup": "movimentacoes", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "tipo", "order": "ASCENDING" },
+      { "fieldPath": "data", "order": "DESCENDING" } ] },
+
+    { "collectionGroup": "movimentacoes", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "cliente_destino", "order": "ASCENDING" },
+      { "fieldPath": "data", "order": "DESCENDING" } ] },
+
+    { "collectionGroup": "recolhimentos", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "etapa", "order": "ASCENDING" },
+      { "fieldPath": "criado_em", "order": "DESCENDING" } ] },
+
+    { "collectionGroup": "historico", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "ativo_id", "order": "ASCENDING" },
+      { "fieldPath": "data", "order": "DESCENDING" } ] },
+
+    { "collectionGroup": "ocorrencias", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "ativo_id", "order": "ASCENDING" },
+      { "fieldPath": "data", "order": "DESCENDING" } ] },
+
+    { "collectionGroup": "ocorrencias", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "ativo_id", "order": "ASCENDING" },
+      { "fieldPath": "tipo", "order": "ASCENDING" },
+      { "fieldPath": "data", "order": "DESCENDING" } ] },
+
+    { "collectionGroup": "auditoria", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "entidade", "order": "ASCENDING" },
+      { "fieldPath": "registro_id", "order": "ASCENDING" },
+      { "fieldPath": "criado_em", "order": "DESCENDING" } ] },
+
+    { "collectionGroup": "auditoria", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "entidade", "order": "ASCENDING" },
+      { "fieldPath": "criado_em", "order": "DESCENDING" } ] },
+
+    { "collectionGroup": "anexos", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "ativo_id", "order": "ASCENDING" },
+      { "fieldPath": "tipo", "order": "ASCENDING" },
+      { "fieldPath": "criado_em", "order": "DESCENDING" } ] },
+
+    { "collectionGroup": "contratos_cliente", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "status", "order": "ASCENDING" },
+      { "fieldPath": "data_fim", "order": "ASCENDING" } ] },
+
+    { "collectionGroup": "contratos_fornecedor", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "fornecedor_id", "order": "ASCENDING" },
+      { "fieldPath": "status", "order": "ASCENDING" } ] }
+  ],
+  "fieldOverrides": []
+}

@@ -1,0 +1,264 @@
+rules_version = '2';
+
+/* NEWPC INVENTÁRIO — Regras de segurança do Firestore
+ *
+ * Este arquivo é a barreira real de segurança. A interface esconde botões,
+ * mas é aqui que o acesso é efetivamente negado. Um técnico que tente
+ * gravar em /contratos_cliente pelo console do navegador é bloqueado aqui.
+ *
+ * Deploy:  firebase deploy --only firestore:rules
+ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ---------- helpers ---------- */
+    function logado() {
+      return request.auth != null;
+    }
+
+    function meuDoc() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+    }
+
+    function perfil() {
+      return meuDoc().perfil;
+    }
+
+    function habilitado() {
+      return logado()
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+        && meuDoc().ativo == true;
+    }
+
+    function ehAdmin()     { return habilitado() && perfil() == 'ADMINISTRADOR'; }
+    function ehDiretoria() { return habilitado() && perfil() == 'DIRETORIA'; }
+    function ehAnalista()  { return habilitado() && perfil() == 'ANALISTA'; }
+    function ehTecnico()   { return habilitado() && perfil() == 'TECNICO'; }
+
+    /* Quem opera em campo ou valida: técnico e analista, além do admin. */
+    function operacional() { return ehAdmin() || ehAnalista() || ehTecnico(); }
+    /* Quem pode validar/aprovar. */
+    function validador()   { return ehAdmin() || ehAnalista(); }
+    /* Todo mundo habilitado pode ler o cadastro básico. */
+    function podeLer()     { return habilitado(); }
+
+    /* Impede que o próprio usuário eleve o seu perfil. */
+    function naoMudouPerfil() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['perfil', 'ativo']);
+    }
+
+    /* Campos financeiros só para admin e diretoria. */
+    function semCamposFinanceiros() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['valor_mensal', 'valor_global']);
+    }
+
+    /* ================= USUÁRIOS =================
+       O documento tem como ID o UID do Firebase Auth.
+       Bootstrap: se ainda não existe nenhum usuário, o primeiro a autenticar
+       pode criar o próprio documento como ADMINISTRADOR. Depois disso,
+       só o admin cria usuários. */
+    match /usuarios/{uid} {
+      allow read: if habilitado() || (logado() && request.auth.uid == uid);
+
+      allow create: if ehAdmin()
+        || (logado()
+            && request.auth.uid == uid
+            && !exists(/databases/$(database)/documents/usuarios/$(uid))
+            && request.resource.data.email == request.auth.token.email);
+
+      // o próprio usuário atualiza dados de contato, mas nunca perfil nem ativo
+      allow update: if ehAdmin()
+        || (logado() && request.auth.uid == uid && naoMudouPerfil());
+
+      allow delete: if ehAdmin();
+    }
+
+    /* ================= CADASTROS ESTRUTURAIS =================
+       Fornecedores e contratos: dados comerciais e financeiros.
+       Técnico lê (precisa saber de quem é o equipamento) mas nunca escreve. */
+    match /fornecedores/{id} {
+      allow read:   if podeLer();
+      allow write:  if ehAdmin();
+    }
+
+    match /contratos_fornecedor/{id} {
+      allow read:   if podeLer();
+      allow create, delete: if ehAdmin();
+      allow update: if ehAdmin();
+    }
+
+    match /contratos_cliente/{id} {
+      allow read:   if podeLer();
+      allow create, delete: if ehAdmin();
+      allow update: if ehAdmin();
+    }
+
+    /* Clientes, municípios, unidades, setores e locais:
+       analista mantém a estrutura de localização (é trabalho dele). */
+    match /clientes/{id} {
+      allow read:   if podeLer();
+      allow create, update: if validador();
+      allow delete: if ehAdmin();
+    }
+
+    match /municipios/{id} {
+      allow read:   if podeLer();
+      allow create, update: if validador();
+      allow delete: if ehAdmin();
+    }
+
+    match /unidades/{id} {
+      allow read:   if podeLer();
+      allow create, update: if validador();
+      allow delete: if ehAdmin();
+    }
+
+    match /setores/{id} {
+      allow read:   if podeLer();
+      allow create, update: if validador();
+      allow delete: if ehAdmin();
+    }
+
+    match /locais/{id} {
+      allow read:   if podeLer();
+      allow create, update: if validador();
+      allow delete: if ehAdmin();
+    }
+
+    match /categorias/{id} {
+      allow read:   if podeLer();
+      allow write:  if ehAdmin();
+    }
+
+    /* ================= ATIVOS =================
+       Núcleo do sistema. Técnico PODE atualizar, mas apenas os campos
+       que o inventário legitimamente altera. Não pode mexer em propriedade,
+       contrato ou patrimônio — isso é do analista/admin. */
+    match /ativos/{id} {
+      allow read: if podeLer();
+
+      allow create: if validador();
+
+      allow update: if validador()
+        || (ehTecnico() && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly([
+                'status', 'condicao',
+                'cliente_id', 'unidade_id', 'setor_id', 'local_id', 'municipio_id',
+                'ultimo_inventario', 'proximo_inventario',
+                'observacoes', 'local_anterior',
+                'atualizado_em', 'atualizado_por'
+              ]));
+
+      // exclusão física de ativo nunca — preserva histórico (item 45)
+      allow delete: if false;
+    }
+
+    /* ================= INVENTÁRIO =================
+       Técnico cria e conduz suas sessões. Não pode apagar nada. */
+    match /inventarios/{id} {
+      allow read:   if podeLer();
+      allow create: if operacional()
+        && request.resource.data.responsavel_id == request.auth.uid;
+      allow update: if validador()
+        || (ehTecnico() && resource.data.responsavel_id == request.auth.uid);
+      allow delete: if false;
+    }
+
+    match /inventario_itens/{id} {
+      allow read:   if podeLer();
+      allow create: if operacional()
+        && request.resource.data.tecnico_id == request.auth.uid;
+      allow update: if validador();   // só quem valida corrige um item já registrado
+      allow delete: if false;
+    }
+
+    /* ================= MOVIMENTAÇÕES E RECOLHIMENTOS ================= */
+    match /movimentacoes/{id} {
+      allow read:   if podeLer();
+      allow create: if operacional();
+      // técnico não aprova a própria movimentação
+      allow update: if validador();
+      allow delete: if false;
+    }
+
+    match /recolhimentos/{id} {
+      allow read:   if podeLer();
+      allow create: if operacional();
+      allow update: if validador()
+        || (ehTecnico() && resource.data.solicitado_por == request.auth.uid);
+      allow delete: if false;
+    }
+
+    /* ================= PENDÊNCIAS E OCORRÊNCIAS ================= */
+    match /pendencias/{id} {
+      allow read:   if podeLer();
+      allow create: if operacional();
+      allow update: if validador();   // resolver pendência é ato de análise
+      allow delete: if false;
+    }
+
+    match /ocorrencias/{id} {
+      allow read:   if podeLer();
+      allow create: if operacional();
+      allow update: if validador();
+      allow delete: if false;
+    }
+
+    /* ================= HISTÓRICO =================
+       Append-only. Ninguém edita nem apaga — é a base da rastreabilidade. */
+    match /historico/{id} {
+      allow read:   if podeLer();
+      allow create: if operacional();
+      allow update, delete: if false;
+    }
+
+    /* ================= AUDITORIA =================
+       Append-only e imutável, inclusive para o administrador.
+       Só a diretoria e o administrador leem. */
+    match /auditoria/{id} {
+      allow read:   if ehAdmin() || ehDiretoria();
+      allow create: if habilitado();
+      allow update, delete: if false;
+    }
+
+    /* ================= ANEXOS (metadados) ================= */
+    match /anexos/{id} {
+      allow read:   if podeLer();
+      allow create: if operacional();
+      allow update: if validador();
+      allow delete: if validador();
+    }
+
+    /* ================= IMPORTAÇÕES ================= */
+    match /importacoes/{id} {
+      allow read:   if podeLer();
+      allow create: if validador();
+      allow update, delete: if false;
+    }
+
+    /* ================= CONTADORES DE CÓDIGO =================
+       Transação de sequência. Qualquer usuário habilitado precisa incrementar,
+       mas o valor nunca pode retroceder. */
+    match /contadores/{id} {
+      allow read:   if habilitado();
+      allow create: if habilitado();
+      allow update: if habilitado()
+        && request.resource.data.valor > resource.data.valor;
+      allow delete: if false;
+    }
+
+    /* ================= PARÂMETROS ================= */
+    match /parametros/{id} {
+      allow read:  if habilitado();
+      allow write: if ehAdmin();
+    }
+
+    /* Qualquer coleção não declarada acima é negada por padrão. */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

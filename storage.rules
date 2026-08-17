@@ -1,0 +1,50 @@
+rules_version = '2';
+
+/* NEWPC INVENTÁRIO — Regras do Cloud Storage (fotos e documentos)
+ * Deploy: firebase deploy --only storage
+ */
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function logado() { return request.auth != null; }
+
+    function perfilDe() {
+      return firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data;
+    }
+
+    function habilitado() {
+      return logado()
+        && firestore.exists(/databases/(default)/documents/usuarios/$(request.auth.uid))
+        && perfilDe().ativo == true;
+    }
+
+    function imagemValida() {
+      return request.resource.size < 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    function documentoValido() {
+      return request.resource.size < 25 * 1024 * 1024;
+    }
+
+    /* Fotos de ativos, etiquetas, danos e localização */
+    match /ativos/{ativoId}/{arquivo} {
+      allow read:   if habilitado();
+      allow create: if habilitado() && (imagemValida() || documentoValido());
+      allow update: if false;                       // versionar, não sobrescrever
+      allow delete: if habilitado() && perfilDe().perfil in ['ADMINISTRADOR', 'ANALISTA'];
+    }
+
+    /* Documentos de contratos, fornecedores e clientes */
+    match /documentos/{entidade}/{registroId}/{arquivo} {
+      allow read:   if habilitado();
+      allow create: if habilitado() && documentoValido();
+      allow update: if false;
+      allow delete: if habilitado() && perfilDe().perfil == 'ADMINISTRADOR';
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
