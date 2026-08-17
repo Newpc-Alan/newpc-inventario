@@ -78,26 +78,17 @@ function mostrarLogin(msg) {
   if (msg) { const e = $("#li-erro"); e.textContent = msg; e.classList.remove("oculto"); }
 }
 
-/* Primeiro acesso: autenticou no Firebase mas não existe documento em /usuarios.
-   Se a base estiver vazia, este usuário vira o ADMINISTRADOR inicial. */
+/* Primeiro acesso: autenticou no Firebase mas não existe documento em /usuarios. */
 async function telaPrimeiroAcesso(info) {
   $("#tela-login").style.display = "grid";
   const caixa = document.querySelector(".login-caixa");
-  let baseVazia = false;
-  try { baseVazia = (await contar("usuarios")) === 0; } catch { baseVazia = false; }
 
-  if (!baseVazia) {
-    caixa.innerHTML = `<div class="aviso warn"><div><b>Acesso ainda não liberado</b>
-      Sua conta (${esc(info.email)}) autenticou, mas não possui cadastro no sistema.
-      Solicite ao administrador que cadastre seu usuário em <b>Usuários</b>.</div></div>
-      <button class="btn bloco" style="margin-top:14px" id="pa-sair">Sair</button>`;
-    $("#pa-sair").onclick = () => sair();
-    return;
-  }
-
+  /* Não consultamos "quantos usuários existem" — listar a coleção é negado pelas regras,
+     e deve ser mesmo. Mostramos o formulário e deixamos o Firestore decidir: se a gravação
+     for recusada, é porque este acesso não tem direito ao cadastro inicial. */
   caixa.innerHTML = `
     <div class="login-marca"><h1>PRIMEIRA CONFIGURAÇÃO</h1>
-      <p>Nenhum usuário cadastrado. Você será o administrador inicial.</p></div>
+      <p>Sua conta ainda não tem cadastro no sistema.</p></div>
     <div class="campo" style="margin-bottom:12px"><label>Seu nome completo</label>
       <input class="inp" id="pa-nome" placeholder="Nome e sobrenome"></div>
     <div class="campo" style="margin-bottom:12px"><label>Cargo</label>
@@ -105,8 +96,9 @@ async function telaPrimeiroAcesso(info) {
     <div class="campo" style="margin-bottom:16px"><label>Telefone</label>
       <input class="inp" id="pa-tel" placeholder="(67) 99999-9999"></div>
     <div class="aviso info" style="margin-bottom:14px"><div>
-      A base será criada <b>vazia</b>. Serão gravadas apenas as categorias padrão de equipamentos,
-      que você pode editar em Configurações.</div></div>
+      Entrando como <b>${esc(info.email)}</b>. A base será criada <b>vazia</b> —
+      serão gravadas apenas as categorias padrão de equipamento, editáveis depois.</div></div>
+    <div id="pa-erro" class="aviso err oculto" style="margin-bottom:13px"></div>
     <button class="btn p bloco lg" id="pa-ok">Criar administrador e entrar</button>
     <button class="btn bloco" id="pa-sair" style="margin-top:8px;border:0;background:transparent">Sair</button>`;
 
@@ -114,7 +106,9 @@ async function telaPrimeiroAcesso(info) {
   $("#pa-ok").onclick = async () => {
     const nome = $("#pa-nome").value.trim();
     if (!nome) return toast("Informe seu nome.", "warn");
-    const btn = $("#pa-ok"); btn.disabled = true; btn.innerHTML = `<span class="spin"></span>`;
+    const btn = $("#pa-ok"), err = $("#pa-erro");
+    err.classList.add("oculto");
+    btn.disabled = true; btn.innerHTML = `<span class="spin"></span>`;
     try {
       const { setDoc, doc, db, serverTimestamp } = await import("./firebase.js");
       await setDoc(doc(db, "usuarios", info.uid), {
@@ -122,13 +116,22 @@ async function telaPrimeiroAcesso(info) {
         telefone: $("#pa-tel").value.trim() || null, perfil: "ADMINISTRADOR", ativo: true,
         criado_em: serverTimestamp(), atualizado_em: serverTimestamp()
       });
-      const { CATEGORIAS_PADRAO } = await import("./config.js");
-      const { lote } = await import("./store.js");
-      await lote(CATEGORIAS_PADRAO.map(n => ({ colecao: "categorias", dados: { nome: n, ativo: true } })));
+      /* Categorias padrão: estrutura, não dado fictício. */
+      try {
+        const { CATEGORIAS_PADRAO } = await import("./config.js");
+        const { lote } = await import("./store.js");
+        await lote(CATEGORIAS_PADRAO.map(n => ({ colecao: "categorias", dados: { nome: n, ativo: true } })));
+      } catch (e) { console.warn("[setup] categorias não gravadas:", e); }
       location.reload();
     } catch (e) {
       console.error(e);
-      toast("Falha ao criar o administrador. Verifique as regras do Firestore.", "err");
+      const negado = /permission|insufficient/i.test(e.message || "");
+      err.innerHTML = negado
+        ? `<div><b>Acesso ainda não liberado</b>
+            O cadastro inicial já foi feito por outra conta. Peça ao administrador
+            para cadastrar <b>${esc(info.email)}</b> no menu Usuários.</div>`
+        : `<div><b>Não foi possível concluir</b> ${esc(e.message)}</div>`;
+      err.classList.remove("oculto");
       btn.disabled = false; btn.textContent = "Criar administrador e entrar";
     }
   };
@@ -213,7 +216,7 @@ function ligarBuscaGlobal() {
     box.classList.remove("oculto");
     box.innerHTML = `<div class="vazio" style="padding:18px"><span class="spin"></span></div>`;
 
-    /* Firestore não faz LIKE. Usamos prefix match (>= termo, <= termo+) nos campos indexados
+    /* Firestore não faz LIKE. Usamos prefix match (>= termo, <= termo+) nos campos indexados
        e complementamos com filtro em memória sobre as referências já em cache. */
     const campos = ["patrimonio_newpc", "numero_serie", "service_tag", "patrimonio_fornecedor"];
     const alvo = termo.toUpperCase();
@@ -221,14 +224,14 @@ function ligarBuscaGlobal() {
 
     await Promise.all(campos.map(async campo => {
       try {
-        const { dados } = await buscar("ativos", [[campo, ">=", alvo], [campo, "<=", alvo + ""]], [campo], 6);
+        const { dados } = await buscar("ativos", [[campo, ">=", alvo], [campo, "<=", alvo + ""]], [campo], 6);
         dados.forEach(a => { if (!vistos.has(a.id)) { vistos.add(a.id); achados.push(a); } });
       } catch { /* índice ausente para o campo — ignora silenciosamente */ }
     }));
 
     if (achados.length < 6) {
       try {
-        const { dados } = await buscar("ativos", [["modelo", ">=", termo], ["modelo", "<=", termo + ""]], ["modelo"], 6);
+        const { dados } = await buscar("ativos", [["modelo", ">=", termo], ["modelo", "<=", termo + ""]], ["modelo"], 6);
         dados.forEach(a => { if (!vistos.has(a.id)) { vistos.add(a.id); achados.push(a); } });
       } catch {}
     }
