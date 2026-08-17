@@ -23,12 +23,19 @@ export function perfilLabel(){ return PERFIL_LABEL[sessao.usuario?.perfil] || "�
 async function carregarUsuario(uid, email) {
   let s = await getDoc(doc(db, "usuarios", uid));
   if (!s.exists()) {
-    // fallback: usuário cadastrado por e-mail antes do primeiro login
-    const q = await getDocs(query(collection(db, "usuarios"), where("email", "==", email)));
-    if (!q.empty) {
-      const antigo = q.docs[0];
-      await setDoc(doc(db, "usuarios", uid), { ...antigo.data(), migrado_de: antigo.id });
-      s = await getDoc(doc(db, "usuarios", uid));
+    /* O administrador pode ter cadastrado a pessoa pelo e-mail, antes do primeiro login.
+       Nesse caso o documento existe com outro ID e precisa ser migrado para o UID.
+       A consulta por e-mail é negada pelas regras para quem ainda não tem cadastro —
+       isso é o comportamento correto e NÃO pode derrubar o login. */
+    try {
+      const q = await getDocs(query(collection(db, "usuarios"), where("email", "==", email)));
+      if (!q.empty) {
+        const antigo = q.docs[0];
+        await setDoc(doc(db, "usuarios", uid), { ...antigo.data(), migrado_de: antigo.id });
+        s = await getDoc(doc(db, "usuarios", uid));
+      }
+    } catch (e) {
+      console.info("[auth] sem cadastro vinculado a este acesso.");
     }
   }
   return s.exists() ? { id: s.id, ...s.data() } : null;
