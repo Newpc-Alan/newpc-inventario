@@ -86,7 +86,8 @@ export async function contar(colecao, filtros = []) {
 }
 
 /* ---------- códigos legíveis sequenciais (item 56) ---------- */
-const PREFIXO = { inventarios: "INV", movimentacoes: "MOV", recolhimentos: "REC", pendencias: "DIV", importacoes: "IMP" };
+const PREFIXO = { inventarios: "INV", movimentacoes: "MOV", recolhimentos: "REC",
+                  pendencias: "DIV", importacoes: "IMP", entradas_lote: "LOT" };
 
 export async function proximoCodigo(colecao) {
   const ano = new Date().getFullYear();
@@ -99,6 +100,48 @@ export async function proximoCodigo(colecao) {
     return n;
   });
   return `${pref}-${ano}-${String(seq).padStart(6, "0")}`;
+}
+
+
+/* ---------- sequência de patrimônio NEWPC (entrada em lote) ----------
+ * Reservar uma faixa inteira numa única transação é o que impede duas pessoas
+ * dando entrada ao mesmo tempo de gerarem o mesmo número. Pedir 300 números
+ * custa uma transação, não trezentas.
+ */
+export async function reservarFaixaPatrimonio(quantidade, inicioForcado = null) {
+  const p = await parametros();
+  const ref = doc(db, "contadores", "PATRIMONIO");
+  return runTransaction(db, async tx => {
+    const s = await tx.get(ref);
+    const ultimo = s.exists() ? s.data().valor : (p.patrimonioInicial - 1);
+    const inicio = inicioForcado != null ? Number(inicioForcado) : ultimo + 1;
+    const fim = inicio + quantidade - 1;
+    /* O contador nunca retrocede: se o usuário forçou um início mais baixo para
+       preencher um buraco antigo, o topo da sequência é preservado. */
+    tx.set(ref, { valor: Math.max(fim, ultimo), prefixo: "PATRIMONIO",
+                  atualizado_em: serverTimestamp() }, { merge: true });
+    return { inicio, fim };
+  });
+}
+
+/** Último patrimônio já reservado. Usado para sugerir o próximo na tela de entrada. */
+export async function ultimoPatrimonio() {
+  const p = await parametros();
+  const d = await obter("contadores", "PATRIMONIO");
+  return d?.valor ?? (p.patrimonioInicial - 1);
+}
+
+/** Verifica se algum número da faixa já existe como ativo. Uma consulta, não N. */
+export async function conflitosNaFaixa(inicio, fim) {
+  const { dados } = await buscar("ativos",
+    [["patrimonio_newpc", ">=", String(inicio)], ["patrimonio_newpc", "<=", String(fim)]],
+    ["patrimonio_newpc", "asc"], 50);
+  /* O Firestore compara texto. Reconferimos numericamente para não acusar
+     falso positivo com números de tamanhos diferentes. */
+  return dados.filter(a => {
+    const n = Number(a.patrimonio_newpc);
+    return Number.isFinite(n) && n >= inicio && n <= fim;
+  });
 }
 
 /* ---------- auditoria (item 44) ---------- */

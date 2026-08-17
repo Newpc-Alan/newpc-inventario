@@ -16,6 +16,7 @@ const modulos = {
   dashboard:     () => import("./views/dashboard.js"),
   inventario:    () => import("./views/inventario.js"),
   ativos:        () => import("./views/ativos.js"),
+  lotes:         () => import("./views/lote.js"),
   clientes:      () => import("./views/cadastros.js"),
   unidades:      () => import("./views/cadastros.js"),
   municipios:    () => import("./views/cadastros.js"),
@@ -73,12 +74,17 @@ iniciarAuth(async u => {
 function mostrarLogin(msg) {
   $("#app").classList.remove("ativo");
   $("#tela-login").style.display = "grid";
-  const b = $("#li-btn"); b.disabled = false; b.textContent = "Entrar";
+  /* A tela de primeiro acesso substitui o conteúdo da caixa de login. Se o usuário sair
+     a partir dela, o formulário não existe mais no DOM — recarregar devolve a tela limpa. */
+  const b = $("#li-btn");
+  if (!b) { location.reload(); return; }
+  b.disabled = false; b.textContent = "Entrar";
   $("#li-senha").value = "";
   if (msg) { const e = $("#li-erro"); e.textContent = msg; e.classList.remove("oculto"); }
 }
 
-/* Primeiro acesso: autenticou no Firebase mas não existe documento em /usuarios. */
+/* Primeiro acesso: autenticou no Firebase mas não existe documento em /usuarios.
+   Se a base estiver vazia, este usuário vira o ADMINISTRADOR inicial. */
 async function telaPrimeiroAcesso(info) {
   $("#tela-login").style.display = "grid";
   const caixa = document.querySelector(".login-caixa");
@@ -216,7 +222,7 @@ function ligarBuscaGlobal() {
     box.classList.remove("oculto");
     box.innerHTML = `<div class="vazio" style="padding:18px"><span class="spin"></span></div>`;
 
-    /* Firestore não faz LIKE. Usamos prefix match (>= termo, <= termo+) nos campos indexados
+    /* Firestore não faz LIKE. Usamos prefix match (>= termo, <= termo+) nos campos indexados
        e complementamos com filtro em memória sobre as referências já em cache. */
     const campos = ["patrimonio_newpc", "numero_serie", "service_tag", "patrimonio_fornecedor"];
     const alvo = termo.toUpperCase();
@@ -224,14 +230,14 @@ function ligarBuscaGlobal() {
 
     await Promise.all(campos.map(async campo => {
       try {
-        const { dados } = await buscar("ativos", [[campo, ">=", alvo], [campo, "<=", alvo + ""]], [campo], 6);
+        const { dados } = await buscar("ativos", [[campo, ">=", alvo], [campo, "<=", alvo + ""]], [campo], 6);
         dados.forEach(a => { if (!vistos.has(a.id)) { vistos.add(a.id); achados.push(a); } });
       } catch { /* índice ausente para o campo — ignora silenciosamente */ }
     }));
 
     if (achados.length < 6) {
       try {
-        const { dados } = await buscar("ativos", [["modelo", ">=", termo], ["modelo", "<=", termo + ""]], ["modelo"], 6);
+        const { dados } = await buscar("ativos", [["modelo", ">=", termo], ["modelo", "<=", termo + ""]], ["modelo"], 6);
         dados.forEach(a => { if (!vistos.has(a.id)) { vistos.add(a.id); achados.push(a); } });
       } catch {}
     }

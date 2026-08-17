@@ -7,6 +7,7 @@ export const MENU = [
     { r: "home",         t: "Início",     i: "dashboard", perm: null },
     { r: "inventario",   t: "Inventário", i: "scan",  perm: "inventario.ver" },
     { r: "ativos",       t: "Ativos",     i: "cpu",   perm: "ativo.ver" },
+    { r: "lotes",        t: "Entrada de Lote", i: "box", perm: "ativo.criar" },
     { r: "movimentacoes",t: "Movimentações", i: "arrows", perm: "movimentacao.ver" },
     { r: "recolhimentos",t: "Recolhimentos", i: "box",    perm: "recolhimento.ver" },
     { r: "pendencias",   t: "Pendências", i: "alert", perm: "pendencia.ver", contador: true },

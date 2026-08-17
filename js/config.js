@@ -246,6 +246,11 @@ export const CATEGORIA_FOTO = ["Equipamento","Etiqueta","Número de série","Dan
 
 /* ============ PARÂMETROS OPERACIONAIS (editáveis em Configurações) ============ */
 export const PARAMETROS_PADRAO = {
+  patrimonioInicial: 27000,           // primeiro número da nova sequência NEWPC
+  patrimonioDigitos: 5,               // 27000 tem 5 dígitos; usado só para conferência visual
+  etiquetaLargura: 50,                // mm — rolo da impressora térmica
+  etiquetaAltura: 25,                 // mm
+  etiquetaMostrarModelo: true,
   diasInventarioVencido: 90,          // ativo sem inventário há X dias = vencido
   diasAlertaContrato: 60,             // contrato vence em X dias = alerta
   exigirAprovacaoDivergencia: true,   // técnico não altera localização direto
@@ -270,3 +275,17 @@ export function corDe(lista, valor) {
   const i = lista.find(x => (x.v ?? x) === valor);
   return COR_CLASSE[i?.cor] || "st-cinza";
 }
+
+
+/* ============ ETIQUETAS TÉRMICAS ============
+ * Medidas dos rolos mais comuns no mercado brasileiro. O usuário pode informar
+ * uma medida personalizada em Configurações. */
+export const PRESETS_ETIQUETA = [
+  { v: "50x25", label: "50 x 25 mm — rolo 1 coluna (mais comum)", l: 50, a: 25 },
+  { v: "50x30", label: "50 x 30 mm — rolo 1 coluna",              l: 50, a: 30 },
+  { v: "40x25", label: "40 x 25 mm — rolo 1 coluna",              l: 40, a: 25 },
+  { v: "60x40", label: "60 x 40 mm — etiqueta grande",            l: 60, a: 40 },
+  { v: "100x50",label: "100 x 50 mm — etiqueta grande",           l: 100, a: 50 },
+  { v: "33x22", label: "33 x 22 mm — rolo 3 colunas",             l: 33, a: 22 },
+  { v: "custom",label: "Personalizada",                            l: 50, a: 25 }
+];
