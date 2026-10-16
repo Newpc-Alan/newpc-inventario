@@ -51,6 +51,7 @@ js/
     dashboard.js               dashboards geral, saúde, origem, cliente, município
     home.js                    tela inicial do técnico e da gestão
     importacao.js              importador Excel/CSV com mapeamento de colunas
+    lote.js                    entrada de equipamentos em lote
     relatorios.js              21 relatórios com exportação
     admin.js                   usuários, parâmetros, categorias, auditoria, integridade
 firestore.rules                🔒 segurança real, no servidor
